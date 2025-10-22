@@ -5,7 +5,7 @@ Needed to figure out which Local models I could count on to consistently follow 
 
 It is pre-configured to work with local LLM servers like [LM Studio](https://lmstudio.ai/), but can be easily adapted for any OpenAI-compatible API.
 
-Here's an example output on an 96gb M3 Max for the script as shown:
+Here's an example output on an 96gb M3 Max for the [script as shown](https://github.com/shihanqu/LLM-Structured-JSON-Tester/blob/main/test_llm_json.py):
 
 ```text
 ========================================
