@@ -1,5 +1,5 @@
 
-# LLM JSON Output & Logic Tester
+# LLM JSON Output Consistency Tester
 
 Needed to figure out which Local models I could count on to consistently follow json SCHEMA. Hence this Python script designed to test and validate the ability of LLMs to generate structured JSON output. 
 
