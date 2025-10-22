@@ -14,7 +14,7 @@ API_URL = "http://localhost:1234/v1/chat/completions"  # LM Studio endpoint
 REQUEST_TIMEOUT = 60  # Seconds to wait for a response before failing
 
 # ========================================
-# TEST SPECIFICATIONS (DON'T EDIT UNLESS KNOWING SCHEMA)
+# TEST SPECIFICATIONS 
 # ========================================
 SCHEMA = {
     "$schema": "http://json-schema.org/draft-07/schema#",
