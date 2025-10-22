@@ -8,8 +8,8 @@ from collections import defaultdict
 # ========================================
 # CONFIGURE YOUR TEST HERE (EDIT THESE VALUES)
 # ========================================
-MODEL_NAMES = ["openai/gpt-oss-20b", "openai/gpt-oss-120b","qwen/qwen3-next-80b","qwen/qwen3-vl-30b","qwen/qwen3-30b-a3b-2507","qwen/qwen3-4b-thinking-2507","mistralai/magistral-small-2509","mlx-community/apriel-1.5-15b-thinker","kimi-vl-a3b-thinking@8bit"]  # Add/remove models as needed
-TEST_RUNS = 10  # Number of test runs per model
+MODEL_NAMES = ["openai/gpt-oss-20b", "openai/gpt-oss-120b","qwen/qwen3-next-80b","qwen/qwen3-vl-30b","qwen/qwen3-30b-a3b-2507","qwen/qwen3-4b-thinking-2507","mistralai/magistral-small-2509","mradermacher/apriel-1.5-15b-thinker/Apriel-1.5-15b-Thinker.Q4_K_S.gguf","glm-4.5-air/GLM-4.5-Air-Q4_0-00001-of-00002.gguf","deepseek-r1-0528-qwen3-8b-mlx"]  # Add/remove models as needed
+TEST_RUNS = 1  # Number of test runs per model
 API_URL = "http://localhost:1234/v1/chat/completions"  # LM Studio endpoint
 REQUEST_TIMEOUT = 60  # Seconds to wait for a response before failing
 
@@ -55,6 +55,8 @@ Judge and rate every one of these jokes on a scale of 1-10, and provide a short 
 """
 # Dynamically count the number of jokes in the prompt
 EXPECTED_JOKES_COUNT = len([line for line in PROMPT.strip().split('\n') if line.strip() and line.strip()[0].isdigit()])
+
+
 
 
 # ========================================
