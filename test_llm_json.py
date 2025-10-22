@@ -2,6 +2,7 @@ import requests
 import json
 from jsonschema import validate, ValidationError
 import re
+import time
 from collections import defaultdict
 
 # ========================================
@@ -10,7 +11,7 @@ from collections import defaultdict
 MODEL_NAMES = ["openai/gpt-oss-20b", "openai/gpt-oss-120b","qwen/qwen3-next-80b","qwen/qwen3-vl-30b","qwen/qwen3-30b-a3b-2507","qwen/qwen3-4b-thinking-2507","mistralai/magistral-small-2509","mlx-community/apriel-1.5-15b-thinker","kimi-vl-a3b-thinking@8bit"]  # Add/remove models as needed
 TEST_RUNS = 10  # Number of test runs per model
 API_URL = "http://localhost:1234/v1/chat/completions"  # LM Studio endpoint
-REQUEST_TIMEOUT = 40  # Seconds to wait for a response before failing
+REQUEST_TIMEOUT = 60  # Seconds to wait for a response before failing
 
 # ========================================
 # TEST SPECIFICATIONS (DON'T EDIT UNLESS KNOWING SCHEMA)
@@ -62,20 +63,19 @@ EXPECTED_JOKES_COUNT = len([line for line in PROMPT.strip().split('\n') if line.
 def test_model(model_name, runs, results):
     """Runs tests for a single model and stores results in the provided dictionary."""
 
-    # Initialize results structure for the current model
     if model_name not in results:
         results[model_name] = {
             'pass_count': 0,
             'fail_count': 0,
-            'errors': defaultdict(int)
+            'errors': defaultdict(int),
+            'tok_s_data': []
         }
 
     print(f"\nTesting model: {model_name} (x{runs} runs)")
 
     for run in range(1, runs + 1):
         print(f"\nRun {run}/{runs}:", end=" ")
-        run_failed = False
-        error_type = "Unexpected Error"  # Default error type
+        error_type = "Unexpected Error"
 
         payload = {
             "model": model_name,
@@ -90,12 +90,15 @@ def test_model(model_name, runs, results):
         }
 
         try:
+            start_time = time.time()
             response = requests.post(API_URL, headers={"Content-Type": "application/json"}, data=json.dumps(payload),
                                      timeout=REQUEST_TIMEOUT)
+            duration = time.time() - start_time
+
             if response.status_code != 200:
                 print(f"❌ HTTP Error {response.status_code}: {response.text[:100]}...")
                 error_type = "HTTP Error"
-                raise ConnectionError("HTTP status was not 200")  # Treat as a failure and skip to except block
+                raise ConnectionError("HTTP status was not 200")
 
             json_response = response.json()
             content = json_response["choices"][0]["message"]["content"]
@@ -108,13 +111,20 @@ def test_model(model_name, runs, results):
                 print(f"(Invalid JSON)\n{content}")
             print("--------------------")
 
+            completion_tokens = json_response.get("usage", {}).get("completion_tokens")
+            if completion_tokens and duration > 0:
+                tok_s = completion_tokens / duration
+                print(f"Performance: {tok_s:.2f} tok/s")
+                # MODIFIED: Record tok/s for EVERY valid API response, regardless of success
+                results[model_name]['tok_s_data'].append(tok_s)
+
             # 1. Parse JSON
             try:
                 json_data = json.loads(content)
             except json.JSONDecodeError as e:
                 print(f"Test Result: ❌ Invalid JSON: {str(e)}")
                 error_type = "Invalid JSON"
-                raise  # Re-raise to be caught by the main exception handler
+                raise
 
             # 2. Validate Schema
             try:
@@ -145,7 +155,6 @@ def test_model(model_name, runs, results):
             results[model_name]['pass_count'] += 1
 
         except Exception as e:
-            # Determine error type if not already set
             if isinstance(e, requests.exceptions.Timeout):
                 print(f"❌ Timeout Error: Model took longer than {REQUEST_TIMEOUT} seconds to respond.")
                 error_type = "Timeout Error"
@@ -153,7 +162,6 @@ def test_model(model_name, runs, results):
                 print(f"❌ Connection Error: {str(e)}")
                 error_type = "Connection Error"
 
-            # Record the failure
             results[model_name]['fail_count'] += 1
             results[model_name]['errors'][error_type] += 1
 
@@ -172,16 +180,23 @@ def print_final_summary(results):
         total = data['pass_count'] + data['fail_count']
         if total > 0:
             pass_rate = (data['pass_count'] / total) * 100
-            print(f"\nSummary for {model_name}: {data['pass_count']}/{total} passed ({pass_rate:.1f}%)")
+            status_emoji = "✅" if pass_rate == 100 else "❌"
 
-            # Print error details if there were any failures
+            avg_tok_s_str = "N/A"
+            if data['tok_s_data']:
+                avg_tok_s = sum(data['tok_s_data']) / len(data['tok_s_data'])
+                avg_tok_s_str = f"{avg_tok_s:.2f} tok/s"
+
+            print(
+                f"\n{status_emoji} {model_name}: {data['pass_count']}/{total} passed ({pass_rate:.1f}%) | Avg Speed: {avg_tok_s_str}")
+
             if data['fail_count'] > 0:
                 for error_type, count in sorted(data['errors'].items()):
                     if count > 0:
                         error_str = "Error" if count == 1 else "Errors"
                         print(f"  {count} {error_type} {error_str}")
         else:
-            print(f"\nSummary for {model_name}: No tests were completed.")
+            print(f"\n❌ {model_name}: No tests were completed.")
 
 
 # ========================================
